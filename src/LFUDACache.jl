@@ -13,8 +13,9 @@ mutable struct LFUDA{K,V} <: AbstractDict{K,V}
   current_size::Int
   maxsize::Integer
   lock::ReentrantLock
+  finalizer::Any
 
-  function LFUDA{K,V}(; maxsize::Integer, priority_key_policy::Function=lfuda_priority_key_policy) where {K,V}
+  function LFUDA{K,V}(; maxsize::Integer, priority_key_policy::Function=lfuda_priority_key_policy, finalizer=nothing) where {K,V}
     new(
       Dict{K,Tuple{Integer, CacheItem{V}}}(),
       MutableBinaryMinHeap{CacheHeapNode{K,V}}(),
@@ -23,6 +24,7 @@ mutable struct LFUDA{K,V} <: AbstractDict{K,V}
       0,
       maxsize,
       ReentrantLock(),
+      finalizer
     )
   end
 end
@@ -138,11 +140,15 @@ function Base.delete!(lfuda::LFUDA{K,V}, key::K)::LFUDA{K,V} where {K,V}
 
     isnothing(cache_tuple) && return lfuda
 
-    node_index, = cache_tuple
+    node_index, cache_item = cache_tuple
 
     delete!(lfuda.heap, node_index)
     delete!(lfuda.cache, key)
     lfuda.current_size -= 1
+
+    if lfuda.finalizer != nothing
+        lfuda.finalizer(key, cache_item.data)
+    end
 
     return lfuda
   end
