@@ -146,7 +146,7 @@ function Base.delete!(lfuda::LFUDA{K,V}, key::K)::LFUDA{K,V} where {K,V}
     delete!(lfuda.cache, key)
     lfuda.current_size -= 1
 
-    println("Finalizer: $(lfuda.finalizer)")
+    # finalize if necessary
     if lfuda.finalizer != nothing
         lfuda.finalizer(key, cache_item.data)
     end
@@ -160,7 +160,15 @@ function replace_cache_item!(lfuda::LFUDA{K, V}, node_index::Integer, key::K, va
 
   hit_cache_item!(lfuda, node_index, key, cache_item)
 
+  # finalize if necessary
+  #old_cache_tuple = get(lfuda.cache,key,nothing)
+  #if !isnothing(old_cache_tuple)
+  #    _, old_cache_item = old_cache_tuple
+  #    finalizer(key,old_cache_item)
+  #end
+
   lfuda.cache[key] = (node_index, cache_item)
+
 
   cache_item
 end
@@ -175,7 +183,6 @@ function hit_cache_item!(lfuda::LFUDA{K,V}, node_index::Integer, key::K, cache_i
 end
 
 function insert_cache_item!(lfuda::LFUDA{K, V}, key::K, value::V, size::Integer)::CacheItem{V} where {K, V}
-    println("Inserting new cache item!")
   should_evict(lfuda) && evict!(lfuda)
 
   cache_item = CacheItem{V}(value, size)
@@ -198,7 +205,13 @@ function evict!(lfuda::LFUDA)
   lfuda.age = cache_heap_node.cache_item.priority_key
   lfuda.current_size -= 1
 
-  println("Evicting cache item!")
+  cache_tuple = get(lfuda.cache, cache_heap_node.key, nothing)
+
+  # finalize if necessary
+  if !isnothing(cache_tuple) && !isnothing(lfuda.finalizer)
+      node_index, cache_item = cache_tuple
+      lfuda.finalizer(cache_heap_node.key, cache_item.data)
+  end
 
   delete!(lfuda.cache, cache_heap_node.key)
 end
