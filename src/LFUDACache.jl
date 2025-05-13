@@ -175,6 +175,7 @@ function hit_cache_item!(lfuda::LFUDA{K,V}, node_index::Integer, key::K, cache_i
 end
 
 function insert_cache_item!(lfuda::LFUDA{K, V}, key::K, value::V, size::Integer)::CacheItem{V} where {K, V}
+    println("Inserting new cache item!")
   should_evict(lfuda) && evict!(lfuda)
 
   cache_item = CacheItem{V}(value, size)
@@ -196,6 +197,8 @@ function evict!(lfuda::LFUDA)
   
   lfuda.age = cache_heap_node.cache_item.priority_key
   lfuda.current_size -= 1
+
+  println("Evicting cache item!")
 
   delete!(lfuda.cache, cache_heap_node.key)
 end
