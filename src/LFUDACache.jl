@@ -146,6 +146,7 @@ function Base.delete!(lfuda::LFUDA{K,V}, key::K)::LFUDA{K,V} where {K,V}
     delete!(lfuda.cache, key)
     lfuda.current_size -= 1
 
+    println("Finalizer: $(lfuda.finalizer)")
     if lfuda.finalizer != nothing
         lfuda.finalizer(key, cache_item.data)
     end
